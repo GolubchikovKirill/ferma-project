@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accounts - Telegram Account Manager</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <header>
+        <h1>Telegram Account Manager</h1>
+        <nav>
+            <a href="/" class="{{ 'active' if active_page == 'home' else '' }}">Home</a>
+            <a href="/accounts/" class="{{ 'active' if active_page == 'accounts' else '' }}">Accounts</a>
+            <a href="/channels/" class="{{ 'active' if active_page == 'channels' else '' }}">Channels</a>
+            <a href="/tasks/" class="{{ 'active' if active_page == 'tasks' else '' }}">Tasks</a>
+        </nav>
+    </header>
+
+    <main>
+        <h2>Manage Accounts</h2>
+        <p>Here you can create and manage your Telegram accounts.</p>
+
+        <!-- Отображение прокси -->
+        <h3>Proxies</h3>
+        <ul>
+            {% for proxy in proxies %}
+                <li>{{ proxy.ip_address }}:{{ proxy.port }}</li>
+            {% endfor %}
+        </ul>
+
+        <!-- Дополнительный контент для аккаунтов -->
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Telegram Account Manager</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Account Manager</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <header>
+        <h1>Telegram Account Manager</h1>
+        <nav>
+            <a href="/" class="{{ 'active' if active_page == 'home' else '' }}">Home</a>
+            <a href="/accounts/" class="{{ 'active' if active_page == 'accounts' else '' }}">Accounts</a>
+            <a href="/channels/" class="{{ 'active' if active_page == 'channels' else '' }}">Channels</a>
+            <a href="/tasks/" class="{{ 'active' if active_page == 'tasks' else '' }}">Tasks</a>
+        </nav>
+    </header>
+
+    <main>
+        <h2>Start Commenting</h2>
+        <p>Click the button below to start the commenting process.</p>
+
+        <!-- Убираем форму создания задачи -->
+        <button id="start-commenting">Start</button>
+
+        <h2>Log</h2>
+        <div id="log">
+            <ul>
+                <!-- Логирование комментариев будет выводиться здесь -->
+            </ul>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Telegram Account Manager</p>
+    </footer>
+
+    <script>
+        document.getElementById("start-commenting").addEventListener("click", async function() {
+            const response = await fetch("/start_commenting/", { method: "GET" });
+            const result = await response.json();
+
+            if (result.success) {
+                // Логирование успешного выполнения
+                const logList = document.getElementById("log").querySelector("ul");
+                logList.innerHTML = '';  // Очистить старый лог
+
+                result.logs.forEach(log => {
+                    const logItem = document.createElement("li");
+                    logItem.textContent = log;
+                    logList.appendChild(logItem);
+                });
+
+                alert(result.message);
+            } else {
+                alert('Something went wrong!');
+            }
+        });
+    </script>
+</body>
+</html>

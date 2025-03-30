@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Account Manager</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <header>
+        <h1>Telegram Account Manager</h1>
+        <nav>
+            <a href="/" class="{{ 'active' if active_page == 'home' else '' }}">Home</a>
+            <a href="/accounts/" class="{{ 'active' if active_page == 'accounts' else '' }}">Accounts</a>
+            <a href="/channels/" class="{{ 'active' if active_page == 'channels' else '' }}">Channels</a>
+            <a href="/tasks/" class="{{ 'active' if active_page == 'tasks' else '' }}">Tasks</a>
+        </nav>
+    </header>
+
+    <main>
+        <h2>Welcome to the Telegram Account Manager!</h2>
+        <p>This is a minimal web interface for managing Telegram accounts, channels, tasks, and proxies.</p>
+
+        <section>
+            <h3>Create Account</h3>
+            <form action="/accounts/" method="post">
+                <label for="phone_number">Phone Number:</label>
+                <input type="text" id="phone_number" name="phone_number" required>
+
+                <label for="api_id">API ID:</label>
+                <input type="number" id="api_id" name="api_id" required>
+
+                <label for="api_hash">API Hash:</label>
+                <input type="text" id="api_hash" name="api_hash" required>
+
+                <button type="submit">Create Account</button>
+            </form>
+        </section>
+
+        <section>
+            <h3>Create Proxy</h3>
+            <form action="/proxies/" method="post">
+                <label for="ip_address">IP Address:</label>
+                <input type="text" id="ip_address" name="ip_address" required>
+
+                <label for="port">Port:</label>
+                <input type="number" id="port" name="port" required>
+
+                <label for="login">Login (optional):</label>
+                <input type="text" id="login" name="login">
+
+                <label for="password">Password (optional):</label>
+                <input type="password" id="password" name="password">
+
+                <button type="submit">Create Proxy</button>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Telegram Account Manager</p>
+    </footer>
+</body>
+</html>

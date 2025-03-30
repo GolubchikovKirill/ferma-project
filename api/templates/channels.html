@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Channels - Telegram Account Manager</title>
+    <link rel="stylesheet" href="/static/styles.css">
+<script>
+    async function addChannel(event) {
+        event.preventDefault(); // Предотвращаем стандартную отправку формы
+
+        const formData = new FormData(event.target);
+
+        const response = await fetch("/channels/", {
+            method: "POST",
+            body: formData // Отправляем данные как formData (не JSON)
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            const successMessage = document.getElementById("success-message");
+            successMessage.textContent = result.message;
+            successMessage.style.display = "block";
+
+            setTimeout(() => {
+                successMessage.style.display = "none";
+                location.reload();
+            }, 2000);
+        } else {
+            alert("Ошибка: " + result.detail); // Исправлено на "detail"
+        }
+    }
+
+    async function deleteChannel(channelId) {
+        const response = await fetch(`/channels/${channelId}`, { method: "DELETE" });
+        if (response.ok) location.reload();
+        else alert("Ошибка при удалении канала.");
+    }
+</script>
+</head>
+<body>
+    <header>
+        <h1>Telegram Account Manager</h1>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/accounts/">Accounts</a>
+            <a href="/channels/" class="active">Channels</a>
+            <a href="/tasks/">Tasks</a>
+        </nav>
+    </header>
+
+    <main>
+        <h2>Manage Channels</h2>
+
+        <!-- Уведомление о добавлении -->
+        <div id="success-message" style="display: none; background: lightgreen; padding: 10px; border-radius: 5px;">
+            Channel added successfully!
+        </div>
+
+        <!-- Форма создания канала -->
+        <form onsubmit="addChannel(event)">
+            <label for="name">Channel Name:</label>
+            <input type="text" id="name" name="name" required>
+
+            <label for="description">Description:</label>
+            <input type="text" id="description" name="description">
+
+            <button type="submit">Create Channel</button>
+        </form>
+
+        <h3>Existing Channels</h3>
+        <ul>
+            {% for channel in channels %}
+                <li>
+                    {{ channel.name }} - {{ channel.description }}
+                    <button onclick="deleteChannel({{ channel.id }})">Delete</button>
+                </li>
+            {% endfor %}
+        </ul>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Telegram Account Manager</p>
+    </footer>
+</body>
+</html>
