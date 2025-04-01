@@ -26,7 +26,7 @@ class AccountCreate(BaseModel):
     bot_token: Optional[str] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class ProxyAssignment(BaseModel):
@@ -50,13 +50,21 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # Главная страница
-@app.get("/", response_class=HTMLResponse)
+@app.get(
+    "/",
+    response_class=HTMLResponse,
+    tags="Шаблоны",
+    summary="Главная страница")
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
 # Создание аккаунта
-@app.post("/accounts/")
+@app.post(
+    "/accounts/",
+    tags="Аккаунты",
+    summary="Создание аккаунта"
+)
 async def create_account(account_data: AccountCreate, db: AsyncSession = Depends(get_db)):
     query = select(Account).filter(Account.phone_number == account_data.phone_number)
     result = await db.execute(query)
@@ -68,7 +76,7 @@ async def create_account(account_data: AccountCreate, db: AsyncSession = Depends
     # Генерация имени и фамилии через OpenAI
     first_name, last_name = await generate_name()
 
-    # Если имя или фамилия не были сгенерированы, можно поставить дефолтное значение
+    # Если имя или фамилия не были сгенерированы, используем дефолтное значение
     username = f"{first_name}_{last_name}"
 
     new_account = Account(
@@ -87,7 +95,11 @@ async def create_account(account_data: AccountCreate, db: AsyncSession = Depends
 
 
 # Запуск процесса комментирования
-@app.get("/start_commenting/")
+@app.get(
+    "/start_commenting/",
+    tags="Основная логика",
+    summary="Запуск процесса комментирования"
+)
 async def start_commenting(db: AsyncSession = Depends(get_db)):
     logs = []
 
@@ -115,7 +127,11 @@ async def start_commenting(db: AsyncSession = Depends(get_db)):
 
 
 # Присваивание прокси аккаунту
-@app.put("/assign_proxy/{account_id}")
+@app.put(
+    "/assign_proxy/{account_id}",
+    tags="Прокси",
+    summary="Присваивание прокси аккаунту"
+)
 async def assign_proxy(account_id: int, proxy_data: ProxyAssignment, db: AsyncSession = Depends(get_db)):
     account = await db.get(Account, account_id)
     proxy = await db.get(Proxy, proxy_data.proxy_id)
@@ -128,8 +144,12 @@ async def assign_proxy(account_id: int, proxy_data: ProxyAssignment, db: AsyncSe
     return {"message": "Proxy assigned successfully!"}
 
 
-# Создание канала
-@app.post("/channels/")
+# Добавление канала
+@app.post(
+    "/channels/",
+    tags="Каналы",
+    summary="Добавление канала"
+)
 async def create_channel(
         name: str = Form(...),
         description: Optional[str] = Form(None),
@@ -153,7 +173,11 @@ async def create_channel(
 
 
 # Удаление канала
-@app.delete("/channels/{channel_id}")
+@app.delete(
+    "/channels/{channel_id}",
+    tags="Каналы",
+    summary="Удаление канала"
+)
 async def delete_channel(channel_id: int, db: AsyncSession = Depends(get_db)):
     channel = await db.get(Channel, channel_id)
 
@@ -166,7 +190,11 @@ async def delete_channel(channel_id: int, db: AsyncSession = Depends(get_db)):
 
 
 # Получение полного списка каналов
-@app.get("/channels/all")
+@app.get(
+    "/channels/all",
+    tags="Каналы",
+    summary="Получение полного списка каналов"
+)
 async def get_all_channels(db: AsyncSession = Depends(get_db)):
     query = select(Channel)
     result = await db.execute(query)
@@ -174,8 +202,12 @@ async def get_all_channels(db: AsyncSession = Depends(get_db)):
     return {"channels": [channel.name for channel in channels]}
 
 
-# Создание прокси
-@app.post("/proxies/")
+# Добавление прокси
+@app.post(
+    "/proxies/",
+    tags="Прокси",
+    summary="Добавление прокси"
+)
 async def create_proxy(proxy_data: ProxyCreate, db: AsyncSession = Depends(get_db)):
     query = select(Proxy).filter(Proxy.ip_address == proxy_data.ip_address, Proxy.port == proxy_data.port)
     result = await db.execute(query)
@@ -197,7 +229,12 @@ async def create_proxy(proxy_data: ProxyCreate, db: AsyncSession = Depends(get_d
 
 
 # Отображение списка аккаунтов
-@app.get("/accounts/", response_class=HTMLResponse)
+@app.get(
+    "/accounts/",
+    response_class=HTMLResponse,
+    tags="Шаблоны",
+    summary="Отображение списка аккаунтов"
+)
 async def show_accounts(request: Request, db: AsyncSession = Depends(get_db)):
     query = select(Account)
     result = await db.execute(query)
@@ -207,7 +244,12 @@ async def show_accounts(request: Request, db: AsyncSession = Depends(get_db)):
 
 
 # Отображение списка каналов
-@app.get("/channels/", response_class=HTMLResponse)
+@app.get(
+    "/channels/",
+    response_class=HTMLResponse,
+    tags="Шаблоны",
+    summary="Отображение списка каналов"
+)
 async def show_channels(request: Request, db: AsyncSession = Depends(get_db)):
     query = select(Channel)
     result = await db.execute(query)
@@ -217,40 +259,18 @@ async def show_channels(request: Request, db: AsyncSession = Depends(get_db)):
 
 
 # Отображение списка прокси
-@app.get("/proxies/", response_class=HTMLResponse)
+@app.get(
+    "/proxies/",
+    response_class=HTMLResponse,
+    tags="Шаблоны",
+    summary="Отображение списка прокси"
+)
 async def show_proxies(request: Request, db: AsyncSession = Depends(get_db)):
     query = select(Proxy)
     result = await db.execute(query)
     proxies = result.scalars().all()
 
     return templates.TemplateResponse("proxies.html", {"request": request, "proxies": proxies})
-
-
-@app.get("/tasks/")
-async def start_commenting_task(db: AsyncSession = Depends(get_db)):
-    logs = []
-
-    try:
-        # Получаем список активных аккаунтов
-        query = select(Account).filter(Account.is_active == True)
-        result = await db.execute(query)
-        accounts = result.scalars().all()
-
-        if not accounts:
-            logs.append("No active accounts found.")
-            return JSONResponse(content={"success": False, "message": "No active accounts found.", "logs": logs})
-
-        # Запуск цикла комментирования
-        await start_commenting_loop(db)
-
-        logs.append("Commenting process started successfully.")
-        return JSONResponse(content={"success": True, "message": "Commenting process started!", "logs": logs})
-
-    except Exception as e:
-        logs.append(f"Error: {str(e)}")
-        return JSONResponse(
-            content={"success": False, "message": "An error occurred while starting the commenting process.",
-                     "logs": logs})
 
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@ async def get_pyrogram_clients(db: AsyncSession):
         if proxy:
             proxy_params = {
                 "proxy": {
-                    "scheme": "socks5",  # Пример с использованием SOCKS5
+                    "scheme": "socks5",  # Используем SOCKS5
                     "host": proxy.ip_address,
                     "port": proxy.port,
                     "username": proxy.login,
@@ -100,4 +100,4 @@ async def start_commenting_loop(db: AsyncSession):
                 print(f"Account {account_id} has commented on all channels. Restarting loop.")
 
             # Задержка перед следующим комментарием
-            await asyncio.sleep(10)  # Задержка между комментариями
+            await asyncio.sleep(10)
