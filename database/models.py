@@ -1,62 +1,58 @@
-from sqlalchemy.orm import DeclarativeBase, relationship
-from sqlalchemy import Column, Integer, String, Boolean, Text, ForeignKey
-
-
-class Base(DeclarativeBase):
-    pass
-
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, Integer, Boolean, Text, ForeignKey
+from .session import Base
 
 class Account(Base):
-    __tablename__ = 'accounts'
+    __tablename__ = "accounts"
 
-    id = Column(Integer, primary_key=True, index=True)
-    phone_number = Column(String, unique=True, index=True)
-    session_data = Column(Text)
-    is_active = Column(Boolean, default=True)
-    proxy_id = Column(Integer, ForeignKey("proxy.id"), nullable=True)  # Связь с Proxy
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    phone_number: Mapped[str] = mapped_column(String, unique=True, index=True)
+    session_data: Mapped[str] = mapped_column(Text)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    proxy_id: Mapped[int | None] = mapped_column(ForeignKey("proxy.id"), nullable=True)
 
-    # Добавленные поля для работы с Telegram
-    api_id = Column(Integer, nullable=False)
-    api_hash = Column(String, nullable=False)
-    session_string = Column(Text, nullable=True)  # Строка сессии для Pyrogram
-    telegram_id = Column(Integer, unique=True, nullable=True)
-    username = Column(String, nullable=True)  # Имя пользователя Telegram (опционально)
-    bot_token = Column(String, nullable=True)  # Токен бота
+    # Данные для работы с Telegram
+    api_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    api_hash: Mapped[str] = mapped_column(String, nullable=False)
+    session_string: Mapped[str | None] = mapped_column(Text, nullable=True)
+    telegram_id: Mapped[int | None] = mapped_column(Integer, unique=True, nullable=True)
+    username: Mapped[str | None] = mapped_column(String, nullable=True)
+    bot_token: Mapped[str | None] = mapped_column(String, nullable=True)
 
-    tasks = relationship("CommentTask", back_populates="account")
-    proxy = relationship("Proxy", back_populates="account")  # Добавлена связь
+    tasks: Mapped[list["CommentTask"]] = relationship(back_populates="account")
+    proxy: Mapped["Proxy"] = relationship(back_populates="account", uselist=False)
 
 
 class Channel(Base):
-    __tablename__ = 'channels'
+    __tablename__ = "channels"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    description = Column(Text)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String, index=True)
+    description: Mapped[str] = mapped_column(Text)
 
-    tasks = relationship("CommentTask", back_populates="channel")
+    tasks: Mapped[list["CommentTask"]] = relationship(back_populates="channel")
 
 
 class CommentTask(Base):
-    __tablename__ = 'comment_tasks'
+    __tablename__ = "comment_tasks"
 
-    id = Column(Integer, primary_key=True, index=True)
-    account_id = Column(Integer, ForeignKey('accounts.id'))
-    channel_id = Column(Integer, ForeignKey('channels.id'))
-    comment = Column(Text)
-    time_to_comment = Column(Integer)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
+    channel_id: Mapped[int] = mapped_column(ForeignKey("channels.id"))
+    comment: Mapped[str] = mapped_column(Text)
+    time_to_comment: Mapped[int] = mapped_column(Integer)
 
-    account = relationship("Account", back_populates="tasks")
-    channel = relationship("Channel", back_populates="tasks")
+    account: Mapped["Account"] = relationship(back_populates="tasks")
+    channel: Mapped["Channel"] = relationship(back_populates="tasks")
 
 
 class Proxy(Base):
-    __tablename__ = 'proxy'
+    __tablename__ = "proxy"
 
-    id = Column(Integer, primary_key=True, index=True)
-    ip_address = Column(String, unique=True, index=True)
-    port = Column(Integer)
-    login = Column(String)
-    password = Column(String)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    ip_address: Mapped[str] = mapped_column(String, unique=True, index=True)
+    port: Mapped[int] = mapped_column(Integer)
+    login: Mapped[str] = mapped_column(String)
+    password: Mapped[str] = mapped_column(String)
 
-    account = relationship("Account", back_populates="proxy", uselist=False)  # Один аккаунт - один прокси
+    account: Mapped["Account"] = relationship(back_populates="proxy", uselist=False)
