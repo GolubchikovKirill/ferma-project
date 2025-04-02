@@ -16,7 +16,7 @@ async def generate_name():
     """Генерирует случайные имя и фамилию"""
     prompt = "Сгенерируй реалистичное русское имя и фамилию."
     response = openai.completions.create(
-        model="gpt-3.5-turbo",  # Используем новый метод completions
+        model="gpt-3.5-turbo",
         prompt=prompt,
         max_tokens=10,
     )
