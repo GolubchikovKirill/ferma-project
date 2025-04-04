@@ -2,9 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.orm import DeclarativeBase
 from config import DB_URL
 
-
 engine = create_async_engine(DB_URL, echo=True)
-
 
 AsyncSessionLocal = async_sessionmaker(
     engine,
@@ -15,6 +13,7 @@ AsyncSessionLocal = async_sessionmaker(
 
 class Base(DeclarativeBase):
     pass
+
 
 # Асинхронный генератор сессии для FastAPI
 async def get_db() -> AsyncSession:

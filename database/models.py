@@ -2,6 +2,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Boolean, Text, ForeignKey
 from .session import Base
 
+
 class Account(Base):
     __tablename__ = "accounts"
 
@@ -11,7 +12,7 @@ class Account(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     proxy_id: Mapped[int | None] = mapped_column(ForeignKey("proxy.id"), nullable=True)
 
-    # Данные для работы с Telegram
+    # Данные для работы с Telegram(разбить на две таблицы??)
     api_id: Mapped[int] = mapped_column(nullable=False)
     api_hash: Mapped[str] = mapped_column(nullable=False)
     session_string: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -21,6 +22,7 @@ class Account(Base):
 
     tasks: Mapped[list["CommentTask"]] = relationship(back_populates="account")
     proxy: Mapped["Proxy"] = relationship(back_populates="account", uselist=False)
+
 
 
 class Channel(Base):
@@ -49,7 +51,7 @@ class Proxy(Base):
     __tablename__ = "proxy"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    ip_address: Mapped[str] = mapped_column(unique=True, index=True)
+    ip_address: Mapped[str] = mapped_column(unique=True, index=True, nullable=False)
     port: Mapped[int]
     login: Mapped[str]
     password: Mapped[str]

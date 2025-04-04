@@ -4,7 +4,7 @@ from pyrogram import Client
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from database.models import Account, Channel
-from service.openai_utils import generate_comment
+from service.openai_service import generate_comment
 
 
 async def get_pyrogram_clients(db: AsyncSession):
