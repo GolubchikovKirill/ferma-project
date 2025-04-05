@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, BackgroundTasks
 from fastapi.responses import JSONResponse
 from sqlalchemy.future import select
 
@@ -13,7 +13,7 @@ router = APIRouter(prefix="", tags=["Основная логика"])
     tags=["Основная логика"],
     summary="Запуск процесса комментирования"
 )
-async def start_commenting(db: AsyncSession = Depends(get_db)):
+async def start_commenting(background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     logs = []
 
     try:
@@ -26,8 +26,8 @@ async def start_commenting(db: AsyncSession = Depends(get_db)):
             logs.append("No active accounts found.")
             return JSONResponse(content={"success": False, "message": "No active accounts found.", "logs": logs})
 
-        # Запуск цикла комментирования
-        await start_commenting_loop(db)
+        # Запуск цикла комментирования как фоновая задача
+        background_tasks.add_task(start_commenting_loop, db)
 
         logs.append("Commenting process started successfully.")
         return JSONResponse(content={"success": True, "message": "Commenting process started!", "logs": logs})

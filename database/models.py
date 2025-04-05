@@ -7,22 +7,12 @@ class Account(Base):
     __tablename__ = "accounts"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    phone_number: Mapped[str] = mapped_column(unique=True, index=True)
-    session_data: Mapped[str] = mapped_column(Text)
+    session_data: Mapped[str] = mapped_column(Text)  # Хранение tdata в виде строки
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     proxy_id: Mapped[int | None] = mapped_column(ForeignKey("proxy.id"), nullable=True)
 
-    # Данные для работы с Telegram(разбить на две таблицы??)
-    api_id: Mapped[int] = mapped_column(nullable=False)
-    api_hash: Mapped[str] = mapped_column(nullable=False)
-    session_string: Mapped[str | None] = mapped_column(Text, nullable=True)
-    telegram_id: Mapped[int | None] = mapped_column(unique=True, nullable=True)
-    username: Mapped[str | None] = mapped_column(nullable=True)
-    bot_token: Mapped[str | None] = mapped_column(nullable=True)
-
     tasks: Mapped[list["CommentTask"]] = relationship(back_populates="account")
     proxy: Mapped["Proxy"] = relationship(back_populates="account", uselist=False)
-
 
 
 class Channel(Base):

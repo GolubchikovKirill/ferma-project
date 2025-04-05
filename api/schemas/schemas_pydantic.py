@@ -1,12 +1,9 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import Optional
 
 
 class AccountCreate(BaseModel):
-    phone_number: str = Field(..., min_length=10, max_length=15, pattern=r'^\+?[0-9]+$')
-    api_id: int
-    api_hash: str
-    session_string: Optional[str] = None
+    session_data: str  # Уникальный идентификатор для аккаунта
     telegram_id: Optional[int] = None
     bot_token: Optional[str] = None
 

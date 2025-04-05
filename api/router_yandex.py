@@ -1,13 +1,13 @@
 import os
 from schemas.schemas_pydantic import AccountRequest
 from fastapi import APIRouter, HTTPException
-from service.yandex_disk_service import upload_tdata_for_account, download_tdata_for_account, ensure_tdata_folder_exists
+from service.yandex_disk_service import upload_tdata_for_account, download_tdata_for_account, \
+    ensure_tdata_folder_exists, get_session_path
 
 router = APIRouter(prefix="", tags=["Яндекс.Диск"])
 
-
 # Проверка существования tdata папки (если необходимо)
-async def lifespan(receive, send):
+async def lifespan():
     """ Инициализация папки tdata при запуске. """
     ensure_tdata_folder_exists()
     yield  # Завершение приложения
@@ -48,7 +48,7 @@ async def download_tdata(account_request: AccountRequest):
     summary="Проверка наличия tdata"
 )
 async def check_tdata(account_id: int):
-    session_path = f"/path/to/tdata/session_{account_id}"
+    session_path = get_session_path(account_id)  # Используем функцию для получения пути
 
     if os.path.exists(session_path):
         return {"message": f"Tdata для аккаунта {account_id} существует."}

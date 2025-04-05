@@ -1,6 +1,18 @@
 import os
 from dotenv import load_dotenv
+from pydantic_settings import BaseSettings
 
+class Settings(BaseSettings):
+    redis_host: str = os.getenv("REDIS_HOST", "localhost")
+    redis_port: int = int(os.getenv("REDIS_PORT", 6379))
+    redis_db: int = int(os.getenv("REDIS_DB", 0))
+    redis_password: str = os.getenv("REDIS_PASSWORD", "")  # Если Redis защищен паролем
+
+    class Config:
+        env_file = ".env"
+
+
+settings = Settings()
 
 load_dotenv()
 

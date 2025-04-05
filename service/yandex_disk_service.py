@@ -1,10 +1,41 @@
 import os
+import zipfile
 import requests
 from config import YANDEX_DISK_TOKEN, YANDEX_DISK_URL
 
-
-# Папка для хранения tdata локально
 TDATA_LOCAL_PATH = '/TDATA'
+
+
+def upload_tdata_for_account(account_id: int):
+    """ Загружает tdata на Яндекс.Диск для указанного аккаунта """
+    local_session_path = get_session_path(account_id)
+    remote_session_path = f"/TDATA/{account_id}/tdata.zip"
+    upload_to_yandex_disk(local_session_path, remote_session_path)
+
+
+def download_tdata_for_account(account_id: int):
+    """ Скачивает tdata для аккаунта с Яндекс.Диска """
+    remote_session_path = f"/TDATA/{account_id}/tdata.zip"
+    local_session_path = get_session_path(account_id)
+
+    # Проверяем, существует ли файл локально
+    if not os.path.exists(local_session_path):
+        download_from_yandex_disk(remote_session_path, local_session_path)
+
+        # Распаковка
+        if os.path.exists(local_session_path):
+            extract_path = os.path.join(TDATA_LOCAL_PATH, f"tdata_{account_id}")
+            if not os.path.exists(extract_path):
+                os.makedirs(extract_path)
+
+            with zipfile.ZipFile(local_session_path, 'r') as zip_ref:
+                zip_ref.extractall(extract_path)
+            print(f"Архив {local_session_path} успешно распакован в {extract_path}")
+            os.remove(local_session_path)  # Удаляем архив после распаковки
+        else:
+            print(f"Ошибка: zip-файл {local_session_path} не найден после скачивания")
+    else:
+        print(f"Файл сессии для аккаунта {account_id} уже существует локально.")
 
 
 def upload_to_yandex_disk(local_path: str, remote_path: str):
@@ -68,27 +99,3 @@ def ensure_tdata_folder_exists():
 def get_session_path(account_id: int):
     """ Генерирует путь к файлу сессии для аккаунта. """
     return os.path.join(TDATA_LOCAL_PATH, f"session_{account_id}")
-
-
-def upload_tdata_for_account(account_id: int):
-    """ Загружает tdata для аккаунта на Яндекс.Диск """
-    local_session_path = get_session_path(account_id)
-
-    # Если файл сессии существует, загружаем его
-    if os.path.exists(local_session_path):
-        remote_session_path = f"/tdata/{account_id}/session"
-        upload_to_yandex_disk(local_session_path, remote_session_path)
-    else:
-        print(f"Файл сессии для аккаунта {account_id} не найден по пути {local_session_path}")
-
-
-def download_tdata_for_account(account_id: int):
-    """ Скачивает tdata для аккаунта с Яндекс.Диска """
-    remote_session_path = f"/tdata/{account_id}/session"
-    local_session_path = get_session_path(account_id)
-
-    # Проверяем, существует ли файл локально
-    if not os.path.exists(local_session_path):
-        download_from_yandex_disk(remote_session_path, local_session_path)
-    else:
-        print(f"Файл сессии для аккаунта {account_id} уже существует локально.")

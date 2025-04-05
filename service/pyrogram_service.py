@@ -6,7 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from database.models import Account, Channel
 from service.openai_service import generate_comment
-from service.yandex_disk_service import download_tdata_for_account  # Импортируем сервис Яндекс.Диска
+from service.yandex_disk_service import download_tdata_for_account, TDATA_LOCAL_PATH
+from service.redis_service import check_rate_limit
+
 
 async def get_pyrogram_clients(db: AsyncSession):
     """ Получение активных аккаунтов и создание Pyrogram клиентов с учётом tdata и прокси """
@@ -17,8 +19,7 @@ async def get_pyrogram_clients(db: AsyncSession):
     clients = {}
     for account in accounts:
         # Путь к tdata сессии для каждого аккаунта
-        session_name = account.phone_number  # Используем номер телефона как уникальный session_name
-        session_path = os.path.join('/path/to/tdata', session_name)  # Путь будет динамически генерироваться
+        session_path = os.path.join(TDATA_LOCAL_PATH, f"tdata_{account.id}")  # Путь будет динамически генерироваться
 
         # Проверяем, существует ли локальный файл tdata
         if not os.path.exists(session_path):
@@ -86,6 +87,11 @@ async def start_commenting_loop(db: AsyncSession):
     # Цикл комментирования
     while True:
         for account_id, client in clients.items():
+            # Проверка на rate limit
+            if not await check_rate_limit(account_id):
+                print(f"Rate limit exceeded for account {account_id}, skipping...")
+                continue
+
             # Получаем каналы, которые еще не были прокомментированы данным аккаунтом
             not_commented_channels = [channel for channel in channels if
                                       channel.id not in commented_channels[account_id]]
