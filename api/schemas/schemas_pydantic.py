@@ -23,3 +23,6 @@ class ProxyCreate(BaseModel):
     port: int
     login: Optional[str] = None
     password: Optional[str] = None
+
+class AccountRequest(BaseModel):
+    account_id: int

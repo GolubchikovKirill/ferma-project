@@ -1,21 +1,28 @@
 import asyncio
 import random
+import os
 from pyrogram import Client
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from database.models import Account, Channel
 from service.openai_service import generate_comment
-
+from service.yandex_disk_service import download_tdata_for_account  # Импортируем сервис Яндекс.Диска
 
 async def get_pyrogram_clients(db: AsyncSession):
-    """ Получение активных аккаунтов и создание Pyrogram клиентов с учётом прокси """
+    """ Получение активных аккаунтов и создание Pyrogram клиентов с учётом tdata и прокси """
     query = select(Account).filter(Account.is_active == True)
     result = await db.execute(query)
     accounts = result.scalars().all()
 
     clients = {}
     for account in accounts:
+        # Путь к tdata сессии для каждого аккаунта
         session_name = account.phone_number  # Используем номер телефона как уникальный session_name
+        session_path = os.path.join('/path/to/tdata', session_name)  # Путь будет динамически генерироваться
+
+        # Проверяем, существует ли локальный файл tdata
+        if not os.path.exists(session_path):
+            download_tdata_for_account(account.id)  # Если tdata нет, загружаем его
 
         # Проверяем, есть ли у аккаунта прокси
         proxy = account.proxy
@@ -32,12 +39,11 @@ async def get_pyrogram_clients(db: AsyncSession):
                 }
             }
 
-        # Создаем клиента Pyrogram с учётом прокси
+        # Создаем клиента Pyrogram с учётом tdata и прокси
         clients[account.id] = Client(
-            session_name,
-            api_id=account.api_id,
-            api_hash=account.api_hash,
-            session_string=account.session_string,
+            session_path,  # Используем путь к tdata сессии
+            api_id=account.api_id,  # api_id нужен для работы с API
+            api_hash=account.api_hash,  # api_hash для работы с API
             **proxy_params  # Передаем параметры прокси
         )
 

@@ -4,23 +4,22 @@ from fastapi.responses import HTMLResponse
 from fastapi.requests import Request
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.future import select
-
 from database.models import Channel, Proxy, Account
 from database.session import get_db, AsyncSession
 
 router = APIRouter(prefix="", tags=["Шаблоны"])
 
-BASE_DIR = os.path.dirname(__file__)
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
-
 
 @router.get(
     "/",
     response_class=HTMLResponse,
     tags=["Шаблоны"],
-    summary="Главная страница")
+    summary="Главная страница"
+)
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
