@@ -11,15 +11,18 @@
 
 ## Структура проекта
 
-- **api/** — основной код для API и обработки запросов.
+- **api/** — основной код для API и обработки запросов(Там же routers для разделения логики).
 - **main.py** — Точка входа, основной обработчик HTTP
 - **database/** — модель и работа с базой данных.
 - **service/** — обработчики логики для работы с Pyrogram, OpenAI и другими сервисами.
+- **templates/** — HTML-шаблоны для веб-интерфейса.
+- **static/** — статические файлы для веб-интерфейса.
 - **models.py** — SQLAlchemy модели для работы с аккаунтами, каналами, прокси и задачами.
 - **session.py** — обработка сессий базы данных.
 - **pyrogram_service.py** — логика для работы с Pyrogram.
 - **openai_utils.py** — функции для работы с OpenAI (генерация комментариев и имен).
 - **redis_service.py** — брокер сообщений Redis.
+- **yandex_disk_service.py** — логика работы с яндекс диском для TDATA.
 - **config.py** — файл конфигурации загрузки из ".env".
 - **.env** — файл для хранения чувствительных данных, токенов (библиотека python-dotenv).
 
@@ -82,8 +85,10 @@
 
 ## Установка
 
-1. Установите все зависимости:
+1. Установите все зависимости и виртуальное окружение:
    ```bash
+   python -m venv venv
+   source venv/bin/activate (macOS)
    pip install -r requirements.txt
    
 2. Создайте базу данных PostgreSQL:
@@ -93,7 +98,13 @@
 3. Создайте таблицы в базе данных:
    ```bash
    python database/init_db.py
-   
-4. Запустите приложение:
+
+4. Создайте файл .env со следующими переменными:
+   DB_URL=postgresql+asyncpg://userlogin:password@localhost/nameDB
+   OPENAI_API_KEY=указать свой
+   YANDEX_DISK_TOKEN=указать свой
+   YANDEX_DISK_URL=указать свой
+
+5. Запустите приложение:
    ```bash
    uvicorn main:app --reload
