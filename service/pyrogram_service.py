@@ -4,112 +4,74 @@ import os
 from pyrogram import Client
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from config import LOCAL_TDATA_PATH
 from database.models import Account, Channel
-from service.openai_service import generate_comment
-from service.yandex_disk_service import download_tdata_for_account, TDATA_LOCAL_PATH
 from service.redis_service import check_rate_limit
 
 
 async def get_pyrogram_clients(db: AsyncSession):
-    """ Получение активных аккаунтов и создание Pyrogram клиентов с учётом tdata и прокси """
-    query = select(Account).filter(Account.is_active == True)
-    result = await db.execute(query)
+    """Инициализация клиентов на основе аккаунтов из БД"""
+    result = await db.execute(select(Account).filter(Account.is_active == True))
     accounts = result.scalars().all()
 
     clients = {}
     for account in accounts:
-        # Путь к tdata сессии для каждого аккаунта
-        session_path = os.path.join(TDATA_LOCAL_PATH, f"tdata_{account.id}")  # Путь будет динамически генерироваться
+        session_path = os.path.join(LOCAL_TDATA_PATH, f"tdata_{account.id}")
 
-        # Проверяем, существует ли локальный файл tdata
         if not os.path.exists(session_path):
-            download_tdata_for_account(account.id)  # Если tdata нет, загружаем его
+            continue  # Пропускаем несуществующие сессии
 
-        # Проверяем, есть ли у аккаунта прокси
-        proxy = account.proxy
         proxy_params = {}
-
-        if proxy:
+        if account.proxy:
             proxy_params = {
                 "proxy": {
-                    "scheme": "socks5",  # Используем SOCKS5
-                    "host": proxy.ip_address,
-                    "port": proxy.port,
-                    "username": proxy.login,
-                    "password": proxy.password
+                    "scheme": "socks5",
+                    "hostname": account.proxy.ip_address,
+                    "port": account.proxy.port,
+                    "username": account.proxy.login,
+                    "password": account.proxy.password
                 }
             }
 
-        # Создаем клиента Pyrogram с учётом tdata и прокси
         clients[account.id] = Client(
-            session_path,  # Используем путь к tdata сессии
-            api_id=account.api_id,  # api_id нужен для работы с API
-            api_hash=account.api_hash,  # api_hash для работы с API
-            **proxy_params  # Передаем параметры прокси
+            name=str(account.id),
+            workdir=session_path,
+            api_id=account.api_id,
+            api_hash=account.api_hash,
+            **proxy_params
         )
 
     return clients
 
 
-async def comment_on_latest_post(client, channel_name, comment_text):
-    """ Оставить комментарий под последним постом в канале """
+async def comment_on_latest_post(client: Client, channel_name: str, comment_text: str):
+    """Комментирование последнего поста"""
     await client.start()
     try:
-        posts = await client.get_chat_history(channel_name, limit=1)
-        if posts:
-            latest_post = posts[0].message_id
-            await client.send_message(channel_name, comment_text, reply_to_message_id=latest_post)
-            print(f"Commented on post {latest_post} in {channel_name}")
-        else:
-            print(f"No posts found in {channel_name}")
+        async for post in client.get_chat_history(channel_name, limit=1):
+            await post.reply(comment_text)
+            return True
     except Exception as e:
-        print(f"Error commenting in {channel_name}: {e}")
+        print(f"Ошибка комментирования: {e}")
+        return False
     finally:
         await client.stop()
 
 
 async def start_commenting_loop(db: AsyncSession):
-    """ Запускает процесс комментирования с учетом цикличности каналов и задержки """
+    """Основной цикл комментирования"""
     clients = await get_pyrogram_clients(db)
+    channels = (await db.execute(select(Channel))).scalars().all()
 
-    # Получаем список всех каналов
-    query = select(Channel)
-    result = await db.execute(query)
-    channels = result.scalars().all()
-
-    if not channels:
-        print("No channels found.")
-        return
-
-    # Словарь для отслеживания, какие каналы уже прокомментированы каждым аккаунтом
-    commented_channels = {account_id: set() for account_id in clients.keys()}
-
-    # Цикл комментирования
     while True:
         for account_id, client in clients.items():
-            # Проверка на rate limit
             if not await check_rate_limit(account_id):
-                print(f"Rate limit exceeded for account {account_id}, skipping...")
                 continue
 
-            # Получаем каналы, которые еще не были прокомментированы данным аккаунтом
-            not_commented_channels = [channel for channel in channels if
-                                      channel.id not in commented_channels[account_id]]
+            channel = random.choice(channels)
+            comment_text = f"Сгенерированный комментарий для {channel.name}"
 
-            if not_commented_channels:
-                # Выбираем случайный канал, который еще не был прокомментирован этим аккаунтом
-                selected_channel = random.choice(not_commented_channels)
-                comment_text = await generate_comment("Текст последнего поста")  # Генерация комментария (заглушка)
-                await comment_on_latest_post(client, selected_channel.name, comment_text)
+            if await comment_on_latest_post(client, channel.name, comment_text):
+                print(f"Аккаунт {account_id} прокомментировал {channel.name}")
 
-                # Помечаем канал как прокомментированный для этого аккаунта
-                commented_channels[account_id].add(selected_channel.id)
-                print(f"Account {account_id} commented on {selected_channel.name}")
-
-            # Если все каналы прокомментированы, начинаем заново
-            if len(commented_channels[account_id]) == len(channels):
-                commented_channels[account_id].clear()  # Очищаем список, чтобы начать с первого канала
-                print(f"Account {account_id} has commented on all channels. Restarting loop.")
-
-            # Задержка перед следующим комментарием
-            await asyncio.sleep(10)
+            await asyncio.sleep(random.randint(10, 30))

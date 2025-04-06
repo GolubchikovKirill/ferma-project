@@ -1,8 +1,8 @@
-from api.router_acc import router as account
-from api.router_proxy import router as proxy
-from api.router_channel import router as channel
-from api.schema_html import router as schema_html
-from api.router_yandex import router as yandex
-from api.router_commenting import router as commenting
+from routers.router_acc import router as account
+from routers.router_proxy import router as proxy
+from routers.router_channel import router as channel
+from routers.router_html import router as schema_html
+from routers.router_yandex import router as yandex
+from routers.router_commenting import router as commenting
 
 routers = [account, proxy, channel, schema_html, yandex, commenting]

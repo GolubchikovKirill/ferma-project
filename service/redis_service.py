@@ -2,7 +2,7 @@ import json
 import redis.asyncio as redis
 from config import settings
 
-# Инициализация Redis клиента с использованием настроек из config.py
+# Инициализация Redis клиента с использованием настроек
 redis_client = redis.from_url(
     f"redis://{settings.redis_host}:{settings.redis_port}/{settings.redis_db}",
     password=settings.redis_password if settings.redis_password else None

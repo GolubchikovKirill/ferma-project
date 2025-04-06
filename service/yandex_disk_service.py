@@ -1,101 +1,111 @@
+import io
 import os
 import zipfile
 import requests
-from config import YANDEX_DISK_TOKEN, YANDEX_DISK_URL
+import urllib.parse
 
-TDATA_LOCAL_PATH = '/TDATA'
+from sqlalchemy import select
 
-
-def upload_tdata_for_account(account_id: int):
-    """ Загружает tdata на Яндекс.Диск для указанного аккаунта """
-    local_session_path = get_session_path(account_id)
-    remote_session_path = f"/TDATA/{account_id}/tdata.zip"
-    upload_to_yandex_disk(local_session_path, remote_session_path)
-
-
-def download_tdata_for_account(account_id: int):
-    """ Скачивает tdata для аккаунта с Яндекс.Диска """
-    remote_session_path = f"/TDATA/{account_id}/tdata.zip"
-    local_session_path = get_session_path(account_id)
-
-    # Проверяем, существует ли файл локально
-    if not os.path.exists(local_session_path):
-        download_from_yandex_disk(remote_session_path, local_session_path)
-
-        # Распаковка
-        if os.path.exists(local_session_path):
-            extract_path = os.path.join(TDATA_LOCAL_PATH, f"tdata_{account_id}")
-            if not os.path.exists(extract_path):
-                os.makedirs(extract_path)
-
-            with zipfile.ZipFile(local_session_path, 'r') as zip_ref:
-                zip_ref.extractall(extract_path)
-            print(f"Архив {local_session_path} успешно распакован в {extract_path}")
-            os.remove(local_session_path)  # Удаляем архив после распаковки
-        else:
-            print(f"Ошибка: zip-файл {local_session_path} не найден после скачивания")
-    else:
-        print(f"Файл сессии для аккаунта {account_id} уже существует локально.")
+from config import (
+    YANDEX_DISK_TOKEN,
+    YANDEX_DISK_URL,
+    LOCAL_TDATA_PATH,
+    REMOTE_TDATA_PATH,
+    REMOTE_TDATA_USED
+)
+from database.models import Account
+from database.session import AsyncSessionLocal
 
 
-def upload_to_yandex_disk(local_path: str, remote_path: str):
-    """ Загружает файл на Яндекс.Диск """
+def check_remote_folder(folder: str) -> bool:
+    """Проверяет существование папки на Яндекс.Диске"""
     headers = {'Authorization': f'OAuth {YANDEX_DISK_TOKEN}'}
-
-    # Получаем ссылку на загрузку
-    upload_url = f'{YANDEX_DISK_URL}/upload?path={remote_path}&overwrite=true'
-    response = requests.get(upload_url, headers=headers)
-
-    if response.status_code != 200:
-        print(f"Ошибка получения ссылки для загрузки: {response.json()}")
-        return
-
-    upload_link = response.json()['href']
-
-    # Загружаем файл
-    with open(local_path, 'rb') as f:
-        upload_response = requests.put(upload_link, files={'file': f})
-
-    if upload_response.status_code == 201:
-        print(f"Файл {local_path} успешно загружен на Яндекс.Диск по пути {remote_path}")
-    else:
-        print(f"Ошибка загрузки файла: {upload_response.json()}")
+    encoded_path = urllib.parse.quote(folder)
+    response = requests.get(
+        f"{YANDEX_DISK_URL}/resources?path={encoded_path}",
+        headers=headers
+    )
+    return response.status_code == 200
 
 
-def download_from_yandex_disk(remote_path: str, local_path: str):
-    """ Скачивает файл с Яндекс.Диска """
+def ensure_remote_folders():
+    """Создает необходимые папки на Яндекс.Диске"""
+    for folder in [REMOTE_TDATA_PATH, REMOTE_TDATA_USED]:
+        if not check_remote_folder(folder):
+            response = requests.put(
+                f"{YANDEX_DISK_URL}/resources?path={urllib.parse.quote(folder)}",
+                headers={'Authorization': f'OAuth {YANDEX_DISK_TOKEN}'}
+            )
+            if response.status_code != 201:
+                print(f"Ошибка при создании папки {folder}: {response.text}")
+
+
+def get_available_archives() -> list:
+    """Возвращает список доступных архивов tdata"""
     headers = {'Authorization': f'OAuth {YANDEX_DISK_TOKEN}'}
-
-    # Получаем ссылку на скачивание
-    download_url = f'{YANDEX_DISK_URL}/download?path={remote_path}'
-    response = requests.get(download_url, headers=headers)
-
-    if response.status_code != 200:
-        print(f"Ошибка получения ссылки для скачивания: {response.json()}")
-        return
-
-    download_link = response.json()['href']
-
-    # Загружаем файл
-    download_response = requests.get(download_link)
-
-    if download_response.status_code == 200:
-        with open(local_path, 'wb') as f:
-            f.write(download_response.content)
-        print(f"Файл {remote_path} успешно скачан с Яндекс.Диска на {local_path}")
-    else:
-        print(f"Ошибка скачивания файла: {download_response.json()}")
+    response = requests.get(
+        f"{YANDEX_DISK_URL}/resources?path={urllib.parse.quote(REMOTE_TDATA_PATH)}",
+        headers=headers
+    )
+    return [
+        item["name"]
+        for item in response.json().get("_embedded", {}).get("items", [])
+        if item["type"] == "file" and item["name"].endswith(".zip")
+    ]
 
 
-def ensure_tdata_folder_exists():
-    """ Проверяем, существует ли локальная папка для tdata. Если нет, создаем её. """
-    if not os.path.exists(TDATA_LOCAL_PATH):
-        os.makedirs(TDATA_LOCAL_PATH)
-        print(f"Создана папка для tdata: {TDATA_LOCAL_PATH}")
-    else:
-        print(f"Папка для tdata уже существует: {TDATA_LOCAL_PATH}")
+def download_and_process_archive(archive_name: str) -> str:
+    """Скачивает и обрабатывает архив"""
+    # Скачивание файла
+    download_url = f"{YANDEX_DISK_URL}/resources/download?path={urllib.parse.quote(f'{REMOTE_TDATA_PATH}/{archive_name}')}"
+    response = requests.get(download_url, headers={'Authorization': f'OAuth {YANDEX_DISK_TOKEN}'})
+    file_content = requests.get(response.json()['href']).content
+
+    # Извлечение номера аккаунта из имени файла
+    account_id = os.path.splitext(archive_name)[0]
+    extract_path = os.path.join(LOCAL_TDATA_PATH, f"tdata_{account_id}")
+
+    # Распаковка
+    try:
+        with zipfile.ZipFile(io.BytesIO(file_content)) as zip_ref:
+            zip_ref.extractall(extract_path)
+    except zipfile.BadZipFile:
+        print(f"Ошибка: архив {archive_name} повреждён!")
+        return None
+
+    # Перемещение архива
+    requests.post(
+        f"{YANDEX_DISK_URL}/resources/move",
+        params={
+            'from': urllib.parse.quote(f"{REMOTE_TDATA_PATH}/{archive_name}"),
+            'path': urllib.parse.quote(f"{REMOTE_TDATA_USED}/{archive_name}")
+        },
+        headers={'Authorization': f'OAuth {YANDEX_DISK_TOKEN}'}
+    )
+
+    return account_id
 
 
-def get_session_path(account_id: int):
-    """ Генерирует путь к файлу сессии для аккаунта. """
-    return os.path.join(TDATA_LOCAL_PATH, f"session_{account_id}")
+async def process_new_tdata():
+    """Основной процесс обработки новых tdata"""
+    ensure_remote_folders()
+    archives = get_available_archives()
+
+    async with AsyncSessionLocal() as session:
+        for archive in archives:
+            account_id = download_and_process_archive(archive)
+
+            # Проверка на существование аккаунта в базе данных
+            existing_account = await session.execute(
+                select(Account).filter(Account.id == int(account_id))
+            )
+            if not existing_account.scalar():
+                # Создание записи в БД
+                account = Account(
+                    id=int(account_id),
+                    username=f"account_{account_id}",
+                    is_active=True
+                )
+                session.add(account)
+
+        await session.commit()

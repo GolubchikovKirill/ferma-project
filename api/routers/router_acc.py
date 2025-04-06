@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.future import select
 
 from database.models import Account
-from schemas.schemas_pydantic import AccountCreate
+from api.schemas.schemas_pydantic import AccountCreate
 from database.session import AsyncSession, get_db
 from service.openai_service import generate_name
 

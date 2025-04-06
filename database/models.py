@@ -10,6 +10,7 @@ class Account(Base):
     session_data: Mapped[str] = mapped_column(Text)  # Хранение tdata в виде строки
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     proxy_id: Mapped[int | None] = mapped_column(ForeignKey("proxy.id"), nullable=True)
+    username: Mapped[str] = mapped_column(nullable=False)
 
     tasks: Mapped[list["CommentTask"]] = relationship(back_populates="account")
     proxy: Mapped["Proxy"] = relationship(back_populates="account", uselist=False)
