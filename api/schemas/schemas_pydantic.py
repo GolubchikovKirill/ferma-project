@@ -3,7 +3,7 @@ from typing import Optional
 
 
 class AccountCreate(BaseModel):
-    session_data: str  # Уникальный идентификатор для аккаунта
+    session_data: str
     telegram_id: Optional[int] = None
     bot_token: Optional[str] = None
 
@@ -23,3 +23,7 @@ class ProxyCreate(BaseModel):
 
 class AccountRequest(BaseModel):
     account_id: int
+
+class GenerateCommentRequest(BaseModel):
+    post_text: str
+    user_prompt: Optional[str] = None

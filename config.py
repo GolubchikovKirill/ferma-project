@@ -17,14 +17,10 @@ class Settings(BaseSettings):
         extra="allow"
     )
 
-
 settings = Settings()
 
-
+# Данные для подключения к БД и API
 DB_URL = os.getenv("DB_URL")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-YANDEX_DISK_TOKEN = os.getenv("YANDEX_DISK_TOKEN")
-YANDEX_DISK_URL = "https://cloud-api.yandex.net/v1/disk"
-LOCAL_TDATA_PATH = "download/tdata"
-REMOTE_TDATA_PATH = "/TDATA"
-REMOTE_TDATA_USED = "/TDATAused"
+API_HASH = os.getenv("API_HASH")
+API_ID = os.getenv("API_ID")

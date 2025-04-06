@@ -1,12 +1,10 @@
 from fastapi import APIRouter, Depends
-
 from database.models import Account, Proxy
 from database.session import AsyncSession, get_db
 from sqlalchemy.future import select
 from api.schemas.schemas_pydantic import ProxyAssignment, ProxyCreate
 
 router = APIRouter(prefix="", tags=["Прокси"])
-
 
 @router.put(
     "/assign_proxy/{account_id}",

@@ -1,41 +1,40 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.future import select
-
-from database.models import Account
-from api.schemas.schemas_pydantic import AccountCreate
-from database.session import AsyncSession, get_db
 from service.openai_service import generate_name
+from service.yandex_disk_service import process_new_tdata
+from database.models import Account
+from database.session import AsyncSession, get_db
+import logging
 
-router = APIRouter(prefix="", tags=["Аккаунты"])
+router = APIRouter(prefix="", tags=["Аккаунты и Яндекс.Диск"])
+logger = logging.getLogger(__name__)
 
 @router.post(
-    "/accounts/",
-    tags=["Аккаунты"],
-    summary="Создание аккаунта"
+    "/accounts/sync-tdata",
+    tags=["Аккаунты и Яндекс.Диск"],
+    summary="Загрузка TData из Яндекс.Диска и создание аккаунтов"
 )
-async def create_account(account_data: AccountCreate, db: AsyncSession = Depends(get_db)):
-    # Мы больше не ищем по phone_number, так как его нет в модели
-    query = select(Account).filter(Account.session_data == account_data.session_data)  # Предположим, что session_data уникально
-    result = await db.execute(query)
-    existing_account = result.scalar_one_or_none()
+async def sync_tdata_and_create_accounts(db: AsyncSession = Depends(get_db)):
+    try:
+        created_folders = await process_new_tdata(db)
 
-    if existing_account:
-        return {"message": "Account with this session data already exists!"}
+        if not created_folders:
+            return {"status": "success", "message": "No new TData folders found"}
 
-    # Генерация имени и фамилии через OpenAI
-    first_name, last_name = await generate_name()
+        for folder_name in created_folders:
+            account = (await db.execute(
+                select(Account).filter(Account.username == folder_name)
+            )).scalar_one()
 
-    # Если имя или фамилия не были сгенерированы, используем дефолтное значение
-    username = f"{first_name}_{last_name}"
+            if not account.first_name or not account.last_name:
+                first_name, last_name = await generate_name()
+                account.first_name = first_name
+                account.last_name = last_name
+                db.add(account)
 
-    # Теперь создаем новый аккаунт с использованием username
-    new_account = Account(
-        session_data=account_data.session_data,  # Используем session_data как уникальный идентификатор
-        is_active=True,  # Аккаунт по умолчанию активен
-        proxy_id=None,   # Если нет прокси, можно передать None
-        username=username  # Добавляем сгенерированное имя пользователя
-    )
+        await db.commit()
+        return {"status": "success", "created_accounts": len(created_folders)}
 
-    db.add(new_account)
-    await db.commit()
-    return {"message": "Account created successfully!"}
+    except Exception as e:
+        logger.error(f"Error during sync: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

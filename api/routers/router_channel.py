@@ -1,12 +1,10 @@
 from fastapi import APIRouter, Form, HTTPException, Depends
 from sqlalchemy.future import select
 from typing import Optional
-
 from database.models import Channel
 from database.session import AsyncSession, get_db
 
 router = APIRouter(prefix="", tags=["Каналы"])
-
 
 @router.post(
     "/channels/",
